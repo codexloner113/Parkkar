@@ -1,0 +1,674 @@
+{
+  "info": {
+    "name": "Parkkar API \u2014 Phase 2",
+    "description": "Covers auth, user, partner, and admin flows against the Parkkar backend. Set {{base_url}} to your running server (default http://localhost:4000). Login requests auto-save their token into collection variables via a test script.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "user_token",
+      "value": ""
+    },
+    {
+      "key": "partner_token",
+      "value": ""
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "vehicle_id",
+      "value": ""
+    },
+    {
+      "key": "parking_id",
+      "value": "1"
+    },
+    {
+      "key": "partner_parking_id",
+      "value": ""
+    },
+    {
+      "key": "slot_id",
+      "value": "2"
+    },
+    {
+      "key": "partner_slot_id",
+      "value": ""
+    },
+    {
+      "key": "booking_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "AUTH",
+      "item": [
+        {
+          "name": "1. Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"testuser-{{$timestamp}}@example.com\",\n  \"phone\": \"9{{$timestamp}}\",\n  \"password\": \"TestPass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "2. Login (USER \u2014 seed data: rohan.mehta@example.com)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) { pm.collectionVariables.set('user_token', json.data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rohan.mehta@example.com\",\n  \"password\": \"REPLACE_WITH_REAL_SEED_PASSWORD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "3. Get current user (me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "USER",
+      "item": [
+        {
+          "name": "4. Create vehicle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.id) { pm.collectionVariables.set('vehicle_id', json.data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/vehicles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plateNumber\": \"UP78ZZ{{$randomInt}}\",\n  \"vehicleType\": \"CAR\",\n  \"make\": \"Maruti Suzuki\",\n  \"model\": \"Swift\"\n}"
+            }
+          }
+        },
+        {
+          "name": "5. Get vehicles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/vehicles"
+          }
+        },
+        {
+          "name": "6. Search parking",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/parking?city=Kanpur"
+          }
+        },
+        {
+          "name": "7. Get parking details",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/parking/{{parking_id}}"
+          }
+        },
+        {
+          "name": "8. Check availability",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/parking/{{parking_id}}/availability?start_time=2026-09-10T10:00:00Z&end_time=2026-09-10T12:00:00Z"
+          }
+        },
+        {
+          "name": "9a. Create booking (first \u2014 should succeed 201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.id) { pm.collectionVariables.set('booking_id', json.data.id); }",
+                  "pm.test('booking created (201)', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slot_id\": {{slot_id}},\n  \"vehicle_id\": {{vehicle_id}},\n  \"start_time\": \"2026-09-10T10:00:00Z\",\n  \"end_time\": \"2026-09-10T12:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "9b. Create OVERLAPPING booking (same slot \u2014 should get 409 BOOKING_CONFLICT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('overlap rejected (409)', () => pm.response.to.have.status(409));",
+                  "const json = pm.response.json();",
+                  "pm.test('error code is BOOKING_CONFLICT', () => pm.expect(json.error).to.eql('BOOKING_CONFLICT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/bookings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slot_id\": {{slot_id}},\n  \"vehicle_id\": {{vehicle_id}},\n  \"start_time\": \"2026-09-10T11:00:00Z\",\n  \"end_time\": \"2026-09-10T13:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "10. Get own bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/bookings"
+          }
+        },
+        {
+          "name": "11. Get booking details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/bookings/{{booking_id}}"
+          }
+        },
+        {
+          "name": "12. Cancel booking",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/bookings/{{booking_id}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Change of plans\"\n}"
+            }
+          }
+        },
+        {
+          "name": "13. Add favorite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/favorites/{{parking_id}}"
+          }
+        },
+        {
+          "name": "14. List favorites",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/favorites"
+          }
+        },
+        {
+          "name": "15. Remove favorite",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/favorites/{{parking_id}}"
+          }
+        },
+        {
+          "name": "16. Add review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/parking/{{parking_id}}/reviews",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"review_text\": \"Great experience, easy to find.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "17. List reviews",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/parking/{{parking_id}}/reviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PARTNER",
+      "item": [
+        {
+          "name": "18. Partner login (seed data: ravi.malhotra@tajstay.com)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) { pm.collectionVariables.set('partner_token', json.data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ravi.malhotra@tajstay.com\",\n  \"password\": \"REPLACE_WITH_REAL_SEED_PASSWORD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "19. Create parking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.id) { pm.collectionVariables.set('partner_parking_id', json.data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partner_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/partner/parking",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Test Location\",\n  \"propertyType\": \"HOTEL\",\n  \"address\": \"Some Road\",\n  \"city\": \"Kanpur\",\n  \"state\": \"Uttar Pradesh\",\n  \"postalCode\": \"208001\",\n  \"latitude\": 26.4499,\n  \"longitude\": 80.3319\n}"
+            }
+          }
+        },
+        {
+          "name": "20. List own parking",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partner_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/partner/parking"
+          }
+        },
+        {
+          "name": "21. Create slot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.id) { pm.collectionVariables.set('partner_slot_id', json.data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partner_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/partner/parking/{{partner_parking_id}}/slots",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slotCode\": \"Z1\",\n  \"slotType\": \"CAR\",\n  \"priceHour\": 45\n}"
+            }
+          }
+        },
+        {
+          "name": "22. List slots",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partner_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/partner/parking/{{partner_parking_id}}/slots"
+          }
+        },
+        {
+          "name": "23. Update slot",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partner_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/partner/slots/{{partner_slot_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priceHour\": 50\n}"
+            }
+          }
+        },
+        {
+          "name": "24. List global service catalog",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/services"
+          }
+        },
+        {
+          "name": "25. View own bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partner_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/partner/bookings"
+          }
+        },
+        {
+          "name": "26. View revenue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partner_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/partner/revenue?range_start=2020-01-01T00:00:00Z&range_end=2030-01-01T00:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ADMIN",
+      "item": [
+        {
+          "name": "27. Admin login (seed data: admin@parkkar.com)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) { pm.collectionVariables.set('admin_token', json.data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@parkkar.com\",\n  \"password\": \"REPLACE_WITH_REAL_SEED_PASSWORD\"\n}"
+            }
+          }
+        },
+        {
+          "name": "28. List users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/admin/users"
+          }
+        },
+        {
+          "name": "29. List partners",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/admin/partners"
+          }
+        },
+        {
+          "name": "30. List parking",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/admin/parking"
+          }
+        },
+        {
+          "name": "31. Update parking status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/admin/parking/{{parking_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "32. List bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/admin/bookings"
+          }
+        },
+        {
+          "name": "33. List payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/admin/payments"
+          }
+        },
+        {
+          "name": "34. Revenue summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/admin/revenue?range_start=2020-01-01T00:00:00Z&range_end=2030-01-01T00:00:00Z"
+          }
+        }
+      ]
+    }
+  ]
+}

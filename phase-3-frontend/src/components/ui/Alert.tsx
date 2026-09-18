@@ -1,0 +1,2 @@
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+export function Alert({ message, tone="error" }: { message: string; tone?: "error"|"success"|"info" }) { const m={error:"border-rose-200 bg-rose-50 text-rose-700",success:"border-emerald-200 bg-emerald-50 text-emerald-700",info:"border-cyan-200 bg-cyan-50 text-cyan-700"}; return <div className={`flex items-start gap-2 rounded-xl border px-3 py-3 text-sm ${m[tone]}`}><span className="mt-0.5">{tone==="success"?<CheckCircle2 className="h-4 w-4"/>:<AlertCircle className="h-4 w-4"/>}</span><span>{message}</span></div>; }

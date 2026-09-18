@@ -1,0 +1,13 @@
+"use client";
+import Link from "next/link";
+import { CalendarClock, ChevronRight, CreditCard, Inbox } from "lucide-react";
+import { AppShell } from "@/components/layout/AppShell";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { useBookings } from "@/hooks/useResources";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Badge } from "@/components/ui/Badge";
+import { dateTime, money, statusTone } from "@/lib/format";
+
+export default function BookingsPage(){return <ProtectedRoute><AppShell><main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8"><div className="mb-8"><div className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-600">ACCOUNT</div><h1 className="mt-2 text-4xl font-bold">Your bookings</h1><p className="mt-2 text-slate-500">Every reservation, payment status, and cancellation in one place.</p></div><BookingList/></main></AppShell></ProtectedRoute>}
+function BookingList(){const {data,isLoading}=useBookings({limit:50});if(isLoading)return <div className="space-y-4">{Array.from({length:4}).map((_,i)=><Skeleton key={i} className="h-28"/>)}</div>;if(!data?.data.length)return <EmptyState icon={<Inbox className="h-5 w-5"/>} title="No bookings yet" description="Your confirmed and pending reservations will show up here." action={<Link href="/parking" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">Find parking</Link>}/>;return <div className="space-y-4">{data.data.map(b=><Link key={b.id} href={`/bookings/${b.id}`} className="group block rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h2 className="font-bold">{b.location_name}</h2><Badge tone={statusTone(b.status)}>{b.status}</Badge></div><p className="mt-1 text-sm text-slate-500">{b.slot_code} · {b.slot_type} · {b.location_city}</p><div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500"><span><CalendarClock className="mr-1 inline h-4 w-4"/>{dateTime(b.start_time)}</span><span><CreditCard className="mr-1 inline h-4 w-4"/>{b.latest_payment_status||"Payment pending"}</span></div></div><div className="flex items-center justify-between sm:justify-end sm:gap-6"><div className="text-right"><div className="text-xs text-slate-400">Total</div><div className="text-lg font-bold">{money(b.total_amount)}</div></div><ChevronRight className="h-5 w-5 text-slate-300 transition group-hover:translate-x-1 group-hover:text-slate-700"/></div></div></Link>)}</div>}
